@@ -17,6 +17,7 @@ package org.springframework.cloud.zookeeper.discovery
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
+import groovy.transform.CompileStatic
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
@@ -39,7 +40,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*
 @ContextConfiguration(classes = Config, loader = SpringApplicationContextLoader)
 @ActiveProfiles('ribbon')
 @WebIntegrationTest
-class ZookeeperDiscoveryISpec extends Specification {
+class ZookeeperDiscoveryISpec extends Specification implements ServerPortSetAndRestoreTrait {
 
 	public static final String TEST_INSTANCE_NAME = 'testInstance'
 
@@ -80,28 +81,31 @@ class ZookeeperDiscoveryISpec extends Specification {
 	@EnableAutoConfiguration
 	@Import(CommonTestConfig)
 	@EnableDiscoveryClient
+	@CompileStatic
 	static class Config {
 
 		@Bean
 		TestRibbonClient testRibbonClient(@LoadBalanced RestTemplate restTemplate,
-										  @Value('${spring.application.name}') String springAppName) {
-			return new TestRibbonClient(restTemplate, springAppName)
+										  @Value('${spring.application.name}') String springAppName,
+										  @Value('${server.port}') int port) {
+			return new TestRibbonClient(restTemplate, springAppName, port)
 		}
-
 	}
 
+	@CompileStatic
 	static class TestRibbonClient extends TestServiceRestClient {
 
 		private final String thisAppName
+		private final int port
 
-		TestRibbonClient(RestTemplate restTemplate, String thisAppName) {
+		TestRibbonClient(RestTemplate restTemplate, String thisAppName, int port) {
 			super(restTemplate)
 			this.thisAppName = thisAppName
+			this.port = port
 		}
 
 		String thisHealthCheck() {
-			return restTemplate.getForObject("http://$thisAppName/health", String)
+			return restTemplate.getForObject("http://$thisAppName:$port/health", String)
 		}
-
 	}
 }
