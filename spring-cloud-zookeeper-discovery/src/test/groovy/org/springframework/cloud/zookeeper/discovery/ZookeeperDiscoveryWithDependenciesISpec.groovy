@@ -17,6 +17,7 @@ package org.springframework.cloud.zookeeper.discovery
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
+import groovy.transform.CompileStatic
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.test.SpringApplicationContextLoader
@@ -65,6 +66,7 @@ class ZookeeperDiscoveryWithDependenciesISpec extends Specification {
 	@EnableAutoConfiguration
 	@Import(CommonTestConfig)
 	@EnableDiscoveryClient
+	@CompileStatic
 	static class Config {
 
 		@Bean

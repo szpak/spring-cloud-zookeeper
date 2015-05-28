@@ -17,6 +17,9 @@ package org.springframework.cloud.zookeeper.discovery
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
+import groovy.transform.CompileStatic
+import org.junit.ClassRule
+import org.junit.contrib.java.lang.system.RestoreSystemProperties
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
@@ -31,7 +34,9 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.ContextConfiguration
+import org.springframework.util.SocketUtils
 import org.springframework.web.client.RestTemplate
+import spock.lang.Shared
 import spock.lang.Specification
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
@@ -41,12 +46,24 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*
 @WebIntegrationTest
 class ZookeeperDiscoveryISpec extends Specification {
 
-	public static final String TEST_INSTANCE_NAME = 'testInstance'
+	private static final String TEST_INSTANCE_NAME = 'testInstance'
 
-	@Autowired TestRibbonClient testRibbonClient
-	@Autowired WireMockServer wiremockServer
-	@Autowired DiscoveryClient discoveryClient
+	@ClassRule
+	@Shared
+	//Unfortunately @RestoreSystemProperties from Spock cannot be used to restore changes made in setupSpec()
+	public RestoreSystemProperties restoreSystemProperties = new RestoreSystemProperties();
+
+	@Autowired
+	TestRibbonClient testRibbonClient
+	@Autowired
+	WireMockServer wiremockServer
+	@Autowired
+	DiscoveryClient discoveryClient
 	WireMock wireMock
+
+	def setupSpec() {
+		System.setProperty("server.port", SocketUtils.findAvailableTcpPort() as String)
+	}
 
 	def setup() {
 		wireMock = new WireMock('localhost', wiremockServer.port())
@@ -80,28 +97,31 @@ class ZookeeperDiscoveryISpec extends Specification {
 	@EnableAutoConfiguration
 	@Import(CommonTestConfig)
 	@EnableDiscoveryClient
+	@CompileStatic
 	static class Config {
 
 		@Bean
 		TestRibbonClient testRibbonClient(@LoadBalanced RestTemplate restTemplate,
-										  @Value('${spring.application.name}') String springAppName) {
-			return new TestRibbonClient(restTemplate, springAppName)
+		                                  @Value('${spring.application.name}') String springAppName,
+		                                  @Value('${server.port}') int port) {
+			return new TestRibbonClient(restTemplate, springAppName, port)
 		}
-
 	}
 
+	@CompileStatic
 	static class TestRibbonClient extends TestServiceRestClient {
 
 		private final String thisAppName
+		private final int port
 
-		TestRibbonClient(RestTemplate restTemplate, String thisAppName) {
+		TestRibbonClient(RestTemplate restTemplate, String thisAppName, int port) {
 			super(restTemplate)
 			this.thisAppName = thisAppName
+			this.port = port
 		}
 
 		String thisHealthCheck() {
-			return restTemplate.getForObject("http://$thisAppName/health", String)
+			return restTemplate.getForObject("http://$thisAppName:$port/health", String)
 		}
-
 	}
 }

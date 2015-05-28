@@ -185,6 +185,12 @@
 				<!-- Only needed at compile time -->
 				<scope>provided</scope>
 			</dependency>
+			<dependency>
+				<groupId>com.github.stefanbirkner</groupId>
+				<artifactId>system-rules</artifactId>
+				<version>1.10.0</version>
+				<scope>test</scope>
+			</dependency>
 			<!-- Spock -->
 			<dependency>
 				<groupId>org.spockframework</groupId>
